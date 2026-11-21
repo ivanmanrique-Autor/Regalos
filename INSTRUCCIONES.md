@@ -35,3 +35,7 @@ Si aparece un error de conexión, revisa que la URL sea la de la implementación
 
 Copia el contenido actualizado de `apps-script/Code.gs` en el proyecto de Apps Script existente y crea una nueva versión de su implementación web (paso 1.4). La aplicación conserva los regalos existentes, añade una columna `comprador` a `RegalosApp` y crea la pestaña `RegalosConfig` para compartir la pantalla de inicio. No cambia las demás pestañas. Sin actualizar la implementación, las funciones nuevas no podrán guardarse.
 
+
+## Destinatarios y cambios de esta versión
+
+La pestaña existente `Personas` proporciona los destinatarios desde la columna A, a partir de la fila 2. La columna A debe tener la cabecera `Nombre`. Las compras se muestran al instante y se guardan en segundo plano; espera al mensaje «Cambios guardados» antes de cerrar la aplicación. Al eliminar se conserva la fila en `RegalosApp` con estado `Eliminado`, y deja de mostrarse en la aplicación. Hay que actualizar y publicar una nueva versión de `apps-script/Code.gs` como se explica en el paso 1.4.

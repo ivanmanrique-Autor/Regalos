@@ -24,7 +24,10 @@ function doGet() {
   try {
     const sheet = sheet_();
     const rows = sheet.getLastRow()>1 ? sheet.getRange(2,1,sheet.getLastRow()-1,HEADERS.length).getValues() : [];
-    return output_({items:rows.filter(r=>r[0]).map(r=>Object.fromEntries(HEADERS.map((h,i)=>[h,r[i]]))),config:{inicio:config_().inicio}});
+    const peopleSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Personas');
+    if (!peopleSheet) throw new Error('No se encuentra la pestaña Personas.');
+    const people = peopleSheet.getLastRow()>1 ? peopleSheet.getRange(2,1,peopleSheet.getLastRow()-1,1).getValues().map(r=>String(r[0]).trim()).filter(Boolean) : [];
+    return output_({items:rows.filter(r=>r[0] && r[6]!=='Eliminado').map(r=>Object.fromEntries(HEADERS.map((h,i)=>[h,r[i]]))),personas:people,config:{inicio:config_().inicio}});
   } catch(e) { return output_({error:String(e.message||e)}); }
 }
 function doPost(e) {
@@ -41,7 +44,8 @@ function doPost(e) {
       if (data.action === 'delete') {
         const index=ids.indexOf(String(data.id||''));
         if(index<0) throw new Error('No se encontró el regalo.');
-        sheet.deleteRow(index+2);
+        sheet.getRange(index+2,7).setValue('Eliminado');
+        sheet.getRange(index+2,9).setValue(new Date().toISOString());
       } else if (data.action === 'save') {
         const item=data.item||{};
         if (!String(item.persona||'').trim() || !String(item.regalo||'').trim()) throw new Error('Indica la persona y el regalo.');
