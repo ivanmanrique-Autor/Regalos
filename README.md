@@ -1,18 +1,18 @@
 # Regalos en familia
 
-Aplicación web con Next.js para organizar regalos familiares usando la hoja de Google Sheets como almacenamiento.
+Aplicación web Next.js para organizar regalos usando Google Sheets como almacenamiento.
 
-## Preparar Google Sheets
+## Conexión con Google Sheets
 
-1. Abre la hoja compartida: https://docs.google.com/spreadsheets/d/120XsAhnaWCw7sX1Ib90rVSCis8i7bAvHocKm3YOJtVk/edit
-2. En **Extensiones → Apps Script**, pega el contenido de `apps-script/Code.gs` y guarda.
-3. En **Implementar → Nueva implementación**, elige **Aplicación web**. Ejecutar como tu cuenta. Restringe el acceso a los usuarios que usarán la app según las opciones disponibles para tu cuenta.
-4. Copia la URL terminada en `/exec`.
+1. Abre la hoja: https://docs.google.com/spreadsheets/d/120XsAhnaWCw7sX1Ib90rVSCis8i7bAvHocKm3YOJtVk/edit
+2. En **Extensiones → Apps Script**, pega y guarda `apps-script/Code.gs`.
+3. En **Implementar → Nueva implementación → Aplicación web**, ejecútala como tu cuenta y elige el acceso permitido para las personas que usarán la app. Copia la URL `/exec`.
+4. Añade esa URL en Vercel como variable **SHEETS_API_URL**, con tipo **Secret** y entorno Production (y Preview si lo usarás allí). No uses `NEXT_PUBLIC_`: la dirección debe permanecer en el servidor. Si guardaste la variable con el nombre público anterior, elimínala y rota la URL de implementación si consideras que quedó expuesta.
 
-La API espera los encabezados estándar de las hojas `Regalos`, `Personas` y `Celebraciones` del libro. Lee catálogos y permite crear/editar regalos. No ofrece una acción para borrar filas. El acceso de la web a la API depende de la configuración de acceso de la implementación Apps Script.
+El Apps Script lee las hojas Regalos, Personas y Celebraciones, y permite guardar regalos nuevos o editados. No ofrece una acción para borrar filas. La hoja Gastos se calcula en la app a partir de los registros.
 
-## Ejecutar
+## Ejecutar localmente
 
-Configura `NEXT_PUBLIC_SHEETS_API` con la URL `/exec` de Apps Script y ejecuta `npm install`, `npm run dev`. Para Vercel, importa el repositorio GitHub y define esa misma variable en Project Settings → Environment Variables antes del despliegue.
+Crea `.env.local` con `SHEETS_API_URL=https://script.google.com/macros/s/ID/exec`, luego ejecuta `npm install` y `npm run dev`.
 
-La hoja `Gastos` no es fuente de edición: los gastos se calculan a partir de los registros de Regalos. La navegación incluye Inicio, Regalos, Gastos, Personas y Celebraciones.
+En Vercel, importa el repositorio GitHub. El secreto se usa desde la ruta de servidor `/api/regalos`; el navegador solo se comunica con esa ruta.
