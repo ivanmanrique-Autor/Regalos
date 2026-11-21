@@ -1,6 +1,6 @@
 # Regalos familiares
 
-Aplicación móvil con cuatro pantallas: añadir o editar deseos, ver regalos, agruparlos por persona y consultar gastos. Los datos se guardan en Google Sheets. Los gastos comprados incluyen los estados «Comprado» y «Entregado»; las ideas pendientes se muestran aparte.
+Aplicación móvil con cuatro pantallas: añadir o editar deseos, ver regalos, agruparlos por persona y consultar gastos. Los datos se guardan en Google Sheets. Los gastos muestran los regalos comprados y se pueden filtrar por comprador y destinatario. Los registros antiguos «Idea» se muestran como «Deseo sin asignar» y «Entregado» como «Comprado».
 
 ## 1. Preparar Google Sheets y Apps Script
 
@@ -30,3 +30,8 @@ Necesitas Node.js 18.18 o posterior (se recomienda una versión LTS reciente). C
 La aplicación no tiene usuarios ni contraseña, como se acordó. Quien conozca la dirección pública de la aplicación puede leer y modificar los regalos; la URL de Apps Script también permite hacerlo directamente a quien la conozca. No guardes información sensible. La variable se mantiene en el servidor, pero no convierte el servicio en privado.
 
 Si aparece un error de conexión, revisa que la URL sea la de la implementación `/exec`, que el acceso sea «Cualquier usuario» y que hayas autorizado Apps Script. Tras cambiar código, crea una nueva versión de la implementación. Si Vercel muestra que falta la variable, añádela y vuelve a desplegar. Para datos con ceros a la izquierda o formatos especiales, introduce esos valores como texto.
+
+## Actualizar esta versión
+
+Copia el contenido actualizado de `apps-script/Code.gs` en el proyecto de Apps Script existente y crea una nueva versión de su implementación web (paso 1.4). La aplicación conserva los regalos existentes, añade una columna `comprador` a `RegalosApp` y crea la pestaña `RegalosConfig` para compartir la pantalla de inicio. No cambia las demás pestañas. Sin actualizar la implementación, las funciones nuevas no podrán guardarse.
+

@@ -2,7 +2,7 @@
 const SHEET_NAME = 'RegalosApp';
 const OLD_HEADERS = ['id','persona','regalo','enlace','precio','ocasion','estado','notas','actualizado'];
 const HEADERS = [...OLD_HEADERS, 'comprador'];
-const TABS = ['Añadir deseo','Ver regalos','Por persona','Gastos'];
+const TABS = ['Menú principal','Añadir deseo','Ver regalos','Por persona','Gastos'];
 function sheet_() {
   const book = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = book.getSheetByName(SHEET_NAME);
@@ -15,9 +15,9 @@ function sheet_() {
 function config_() {
   const book = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = book.getSheetByName('RegalosConfig');
-  if (!sheet) { sheet = book.insertSheet('RegalosConfig'); sheet.appendRow(['inicio','Añadir deseo']); }
+  if (!sheet) { sheet = book.insertSheet('RegalosConfig'); sheet.appendRow(['inicio','Menú principal']); }
   const value = sheet.getRange(1,2).getValue();
-  return {sheet, inicio:TABS.includes(value)?value:'Añadir deseo'};
+  return {sheet, inicio:TABS.includes(value)?value:'Menú principal'};
 }
 function output_(data) { return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON); }
 function doGet() {
@@ -59,3 +59,4 @@ function doPost(e) {
   } catch(err) { return output_({error:String(err.message||err)}); }
   finally { if(lock.hasLock()) lock.releaseLock(); }
 }
+
