@@ -1,15 +1,16 @@
 // Vincula este script a la hoja de cálculo de la familia.
 const SHEET_NAME = 'RegalosApp';
 const OLD_HEADERS = ['id','persona','regalo','enlace','precio','ocasion','estado','notas','actualizado'];
-const HEADERS = [...OLD_HEADERS, 'comprador'];
+const HEADERS = [...OLD_HEADERS, 'comprador', 'regalador'];
 const TABS = ['Menú principal','Añadir deseo','Ver regalos','Por persona','Gastos'];
 function sheet_() {
   const book = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = book.getSheetByName(SHEET_NAME);
   if (!sheet) { sheet = book.insertSheet(SHEET_NAME); sheet.appendRow(HEADERS); sheet.setFrozenRows(1); }
   const actual = sheet.getRange(1,1,1,HEADERS.length).getValues()[0];
-  if (actual.slice(0,OLD_HEADERS.length).join('|') !== OLD_HEADERS.join('|') || (actual[9] && actual[9] !== 'comprador')) throw new Error('La pestaña RegalosApp existe pero sus cabeceras no son las esperadas.');
+  if (actual.slice(0,OLD_HEADERS.length).join('|') !== OLD_HEADERS.join('|') || (actual[9] && actual[9] !== 'comprador') || (actual[10] && actual[10] !== 'regalador')) throw new Error('La pestaña RegalosApp existe pero sus cabeceras no son las esperadas.');
   if (!actual[9]) sheet.getRange(1,10).setValue('comprador');
+  if (!actual[10]) sheet.getRange(1,11).setValue('regalador');
   return sheet;
 }
 function config_() {
@@ -54,7 +55,7 @@ function doPost(e) {
         const index=item.id?ids.indexOf(String(item.id)):-1;
         if(item.id && index<0) throw new Error('No se encontró el regalo.');
         const safe=v=>String(v||'').replace(/^[=+\-@]/,"'");
-        const row=[item.id||Utilities.getUuid(),safe(item.persona.trim()),safe(item.regalo.trim()),safe(item.enlace),item.precio===''||item.precio==null?'':Number(item.precio),safe(item.ocasion),item.estado,safe(item.notas),new Date().toISOString(),safe(item.comprador)];
+        const row=[item.id||Utilities.getUuid(),safe(item.persona.trim()),safe(item.regalo.trim()),safe(item.enlace),item.precio===''||item.precio==null?'':Number(item.precio),safe(item.ocasion),item.estado,safe(item.notas),new Date().toISOString(),safe(item.comprador),safe(item.regalador)];
         if(index<0) sheet.appendRow(row); else sheet.getRange(index+2,1,1,HEADERS.length).setValues([row]);
       } else throw new Error('Operación desconocida.');
     }
