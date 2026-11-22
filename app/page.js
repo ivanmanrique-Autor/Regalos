@@ -15,6 +15,8 @@ const hasPrice = x => x.precio !== '' && x.precio != null;
 const sum = list => list.reduce((s,x)=>s+(Number(x.precio)||0),0);
 const palette = ['#FFD66B','#FFB3C1','#B8E6C9','#B9C6FF','#FFCBA4','#C9B8FF','#A8E0F0','#F6C5E8'];
 const tint = name => palette[[...String(name||'')].reduce((a,c)=>a+c.charCodeAt(0),0)%palette.length];
+const newId = () => globalThis.crypto?.randomUUID?.() || `g${Date.now().toString(36)}${Math.random().toString(36).slice(2,10)}`;
+const cacheKey = 'regalos-cache';
 const initial = name => (String(name||'').trim()[0]||'?').toUpperCase();
 
 const paths = {
@@ -44,10 +46,11 @@ export default function Home() {
  const [busy,setBusy]=useState(false), [loading,setLoading]=useState(true), [error,setError]=useState(''), [notice,setNotice]=useState('');
  const [recipient,setRecipient]=useState('Todos'), [buyer,setBuyer]=useState('Todos'), [giftStatus,setGiftStatus]=useState('Todos'), [occasion,setOccasion]=useState('Todas'), [person,setPerson]=useState(''), [start,setStart]=useState('Menú principal');
  const [query,setQuery]=useState(''), [sheet,setSheet]=useState(null), [moreOpen,setMoreOpen]=useState(false), [otherOpen,setOtherOpen]=useState(false), [otherBuyerOpen,setOtherBuyerOpen]=useState(false), [otherGiverOpen,setOtherGiverOpen]=useState(false);
- const load=useCallback(async(initialLoad=false)=>{setError('');try{const r=await fetch('/api/regalos',{cache:'no-store'}), d=await r.json();if(!r.ok)throw Error(d.error);setItems(current=>{const updates=new Map(pending.current);if(active.current&&!updates.has(active.current.id))updates.set(active.current.id,active.current);return (d.items||[]).map(item=>updates.get(item.id)||item)});setSheetPeople(d.personas||[]);const initial=tabs.includes(d.config?.inicio)?d.config.inicio:'Menú principal';setStart(initial);if(initialLoad)setTab(initial);}catch(e){setError(e.message||'No se pudieron cargar los regalos');}finally{setLoading(false);}},[]);
- useEffect(()=>{load(true)},[load]);
+ const load=useCallback(async(initialLoad=false)=>{setError('');try{const r=await fetch('/api/regalos',{cache:'no-store'}), d=await r.json();if(!r.ok)throw Error(d.error);try{localStorage.setItem(cacheKey,JSON.stringify({items:d.items||[],personas:d.personas||[],inicio:d.config?.inicio}))}catch{}setItems(()=>{const updates=new Map(pending.current);if(active.current&&!updates.has(active.current.id))updates.set(active.current.id,active.current);const list=(d.items||[]).map(item=>updates.get(item.id)||item);const ids=new Set(list.map(x=>x.id));updates.forEach((v,id)=>{if(!ids.has(id)&&v.nuevo)list.unshift(v)});return list});setSheetPeople(d.personas||[]);const initial=tabs.includes(d.config?.inicio)?d.config.inicio:'Menú principal';setStart(initial);if(initialLoad&&!touched.current)setTab(initial);}catch(e){setError(e.message||'No se pudieron cargar los regalos');}finally{setLoading(false);}},[]);
+ useEffect(()=>{try{const c=JSON.parse(localStorage.getItem(cacheKey)||'null');if(c&&Array.isArray(c.items)){setItems(c.items);setSheetPeople(c.personas||[]);if(tabs.includes(c.inicio)){setStart(c.inicio);setTab(c.inicio)}setLoading(false)}}catch{}load(true)},[load]);
  const people=useMemo(()=>[...new Set(sheetPeople)].sort((a,b)=>a.localeCompare(b,'es')),[sheetPeople]);
- const pending=useRef(new Map()), timer=useRef(null), flushing=useRef(false), active=useRef(null);
+ const pending=useRef(new Map()), timer=useRef(null), flushing=useRef(false), active=useRef(null), touched=useRef(false);
+ useEffect(()=>{const onVis=()=>{if(document.visibilityState==='visible'&&!pending.current.size&&!flushing.current)load()};document.addEventListener('visibilitychange',onVis);return()=>document.removeEventListener('visibilitychange',onVis)},[load]);
  useEffect(()=>{const warn=e=>{if(pending.current.size||flushing.current){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn)},[]);
  const [syncState,setSyncState]=useState('');
  async function flushChanges(){
@@ -64,14 +67,14 @@ export default function Home() {
  function queueChange(item){pending.current.set(item.id,item);setSyncState('Cambios pendientes');clearTimeout(timer.current);timer.current=setTimeout(flushChanges,900);}
  const buyers=useMemo(()=>[...new Set(items.map(x=>x.comprador).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es')),[items]);
  const occasions=useMemo(()=>[...new Set([...celebrations,...items.map(x=>x.ocasion).filter(Boolean)])],[items]);
- function navigate(t){clearTimeout(timer.current);flushChanges();setTab(t);setNotice('');setPerson('');setSheet(null);window.scrollTo(0,0)}
+ function navigate(t){touched.current=true;clearTimeout(timer.current);flushChanges();setTab(t);setNotice('');setPerson('');setSheet(null);window.scrollTo(0,0)}
  function newGift(persona=''){setEdit('');setForm({...empty,persona});setMoreOpen(false);setOtherOpen(false);setOtherBuyerOpen(false);setOtherGiverOpen(false);navigate('Añadir deseo')}
  async function action(data){setBusy(true);setError('');setNotice('');try{const r=await fetch('/api/regalos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),d=await r.json();if(!r.ok)throw Error(d.error);return true;}catch(e){setError(e.message||'No se pudo guardar');return false;}finally{setBusy(false)}}
  function pickBuyer(v){setForm(f=>{const comprador=f.comprador===v?'':v;return {...f,comprador,estado:f.estado==='Comprado'?f.estado:(comprador.trim()?'Asignado':states[0])}})}
  function typeBuyer(v){setForm(f=>({...f,comprador:v,estado:f.estado==='Comprado'?f.estado:(v.trim()?'Asignado':states[0])}))}
- async function submit(e){e.preventDefault();if(!form.persona){setError('Elige para quién es el regalo.');window.scrollTo(0,0);return}if(await action({action:'save',item:{...form,id:edit,precio:form.precio===''?'':Number(form.precio)}})){setForm(empty);setEdit('');await load();navigate('Ver regalos');setNotice('Regalo guardado.');}}
- function editing(x){setSheet(null);if(pending.current.has(x.id)||flushing.current){setError('Espera a que se guarden los cambios antes de editar.');flushChanges();return;}setForm({...empty,...x,estado:status(x.estado),precio:x.precio??''});setEdit(x.id);setMoreOpen(true);setOtherOpen(!favoritos.includes(x.persona));setOtherBuyerOpen(false);setOtherGiverOpen(false);navigate('Añadir deseo')}
- async function remove(x){setSheet(null);if(pending.current.has(x.id)||flushing.current){setError('Espera a que se guarden los cambios antes de eliminar.');flushChanges();return;}if(window.confirm(`¿Eliminar «${x.regalo}»?`)&&await action({action:'delete',id:x.id})){await load();setNotice('Regalo eliminado.')}}
+ function submit(e){e.preventDefault();if(!form.persona){setError('Elige para quién es el regalo.');window.scrollTo(0,0);return}const item={...form,id:edit||newId(),nuevo:!edit,precio:form.precio===''?'':Number(form.precio)};setItems(cur=>edit?cur.map(x=>x.id===edit?item:x):[item,...cur]);queueChange(item);setForm(empty);setEdit('');navigate('Ver regalos');setNotice('Regalo guardado.');}
+ function editing(x){setSheet(null);if(pending.current.has(x.id)||active.current?.id===x.id){setError('Espera a que se guarden los cambios antes de editar.');flushChanges();return;}setForm({...empty,...x,estado:status(x.estado),precio:x.precio??''});setEdit(x.id);setMoreOpen(true);setOtherOpen(!favoritos.includes(x.persona));setOtherBuyerOpen(false);setOtherGiverOpen(false);navigate('Añadir deseo')}
+ function remove(x){setSheet(null);if(pending.current.has(x.id)||active.current?.id===x.id){setError('Espera a que se guarde este regalo antes de eliminarlo.');flushChanges();return;}if(!window.confirm(`¿Eliminar «${x.regalo}»?`))return;setItems(cur=>cur.filter(i=>i.id!==x.id));setNotice('Regalo eliminado.');fetch('/api/regalos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:x.id})}).then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error)}).catch(e=>{setError('No se pudo eliminar: '+(e.message||'error de conexión'));load()})}
  function toggleBought(x){const next=status(x.estado)==='Comprado'?(x.comprador?'Asignado':'Deseo sin asignar'):'Comprado';const updated={...x,estado:next};setItems(current=>current.map(item=>item.id===x.id?updated:item));queueChange(updated);}
  async function saveStart(v){if(await action({action:'config',inicio:v})){setStart(v);setNotice('Pantalla de inicio guardada para todos.')}}
 

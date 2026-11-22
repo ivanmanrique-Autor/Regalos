@@ -53,7 +53,8 @@ function doPost(e) {
         if (item.precio!=='' && item.precio!=null && (!isFinite(Number(item.precio)) || Number(item.precio)<0)) throw new Error('El precio no es válido.');
         if (!['Deseo sin asignar','Asignado','Comprado'].includes(item.estado)) throw new Error('El estado no es válido.');
         const index=item.id?ids.indexOf(String(item.id)):-1;
-        if(item.id && index<0) throw new Error('No se encontró el regalo.');
+        if(item.id && index<0 && !item.nuevo) throw new Error('No se encontró el regalo.');
+        if(item.id && index<0 && !/^[A-Za-z0-9_-]{8,64}$/.test(String(item.id))) throw new Error('Identificador no válido.');
         const safe=v=>String(v||'').replace(/^[=+\-@]/,"'");
         const row=[item.id||Utilities.getUuid(),safe(item.persona.trim()),safe(item.regalo.trim()),safe(item.enlace),item.precio===''||item.precio==null?'':Number(item.precio),safe(item.ocasion),item.estado,safe(item.notas),new Date().toISOString(),safe(item.comprador),safe(item.regalador)];
         if(index<0) sheet.appendRow(row); else sheet.getRange(index+2,1,1,HEADERS.length).setValues([row]);
