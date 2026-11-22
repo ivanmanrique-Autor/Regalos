@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 const tabs = ['Menú principal', 'Añadir deseo', 'Ver regalos', 'Por persona', 'Gastos'];
 const states = ['Deseo sin asignar', 'Asignado', 'Comprado'];
 const favoritos = ['Pablo', 'Claudia', 'Rebeca', 'Ivan'];
+const compradores = ['Rebeca', 'Ivan', 'Esther', 'David', 'Abuelos Ortega', 'MaryLuz', 'Tios Madrid'];
+const atajosComprador = ['Rebeca', 'Esther', 'David', 'Ivan'];
 const celebrations = ['Tió', 'Papá Noel', 'Reyes', 'Cumpleaños'];
 const empty = { persona:'', regalo:'', enlace:'', precio:'', ocasion:'', estado:states[0], comprador:'', notas:'' };
 const money = n => new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR'}).format(Number(n)||0);
@@ -41,7 +43,7 @@ export default function Home() {
  const [tab,setTab]=useState('Menú principal'), [items,setItems]=useState([]), [sheetPeople,setSheetPeople]=useState([]), [form,setForm]=useState(empty), [edit,setEdit]=useState('');
  const [busy,setBusy]=useState(false), [loading,setLoading]=useState(true), [error,setError]=useState(''), [notice,setNotice]=useState('');
  const [recipient,setRecipient]=useState('Todos'), [buyer,setBuyer]=useState('Todos'), [giftStatus,setGiftStatus]=useState('Todos'), [occasion,setOccasion]=useState('Todas'), [person,setPerson]=useState(''), [start,setStart]=useState('Menú principal');
- const [query,setQuery]=useState(''), [sheet,setSheet]=useState(null), [moreOpen,setMoreOpen]=useState(false), [otherOpen,setOtherOpen]=useState(false);
+ const [query,setQuery]=useState(''), [sheet,setSheet]=useState(null), [moreOpen,setMoreOpen]=useState(false), [otherOpen,setOtherOpen]=useState(false), [otherBuyerOpen,setOtherBuyerOpen]=useState(false);
  const load=useCallback(async(initialLoad=false)=>{setError('');try{const r=await fetch('/api/regalos',{cache:'no-store'}), d=await r.json();if(!r.ok)throw Error(d.error);setItems(current=>{const updates=new Map(pending.current);if(active.current&&!updates.has(active.current.id))updates.set(active.current.id,active.current);return (d.items||[]).map(item=>updates.get(item.id)||item)});setSheetPeople(d.personas||[]);const initial=tabs.includes(d.config?.inicio)?d.config.inicio:'Menú principal';setStart(initial);if(initialLoad)setTab(initial);}catch(e){setError(e.message||'No se pudieron cargar los regalos');}finally{setLoading(false);}},[]);
  useEffect(()=>{load(true)},[load]);
  const people=useMemo(()=>[...new Set(sheetPeople)].sort((a,b)=>a.localeCompare(b,'es')),[sheetPeople]);
@@ -63,12 +65,12 @@ export default function Home() {
  const buyers=useMemo(()=>[...new Set(items.map(x=>x.comprador).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es')),[items]);
  const occasions=useMemo(()=>[...new Set([...celebrations,...items.map(x=>x.ocasion).filter(Boolean)])],[items]);
  function navigate(t){clearTimeout(timer.current);flushChanges();setTab(t);setNotice('');setPerson('');setSheet(null);window.scrollTo(0,0)}
- function newGift(persona=''){setEdit('');setForm({...empty,persona});setMoreOpen(false);setOtherOpen(false);navigate('Añadir deseo')}
+ function newGift(persona=''){setEdit('');setForm({...empty,persona});setMoreOpen(false);setOtherOpen(false);setOtherBuyerOpen(false);navigate('Añadir deseo')}
  async function action(data){setBusy(true);setError('');setNotice('');try{const r=await fetch('/api/regalos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),d=await r.json();if(!r.ok)throw Error(d.error);return true;}catch(e){setError(e.message||'No se pudo guardar');return false;}finally{setBusy(false)}}
  function pickBuyer(v){setForm(f=>{const comprador=f.comprador===v?'':v;return {...f,comprador,estado:f.estado==='Comprado'?f.estado:(comprador.trim()?'Asignado':states[0])}})}
  function typeBuyer(v){setForm(f=>({...f,comprador:v,estado:f.estado==='Comprado'?f.estado:(v.trim()?'Asignado':states[0])}))}
  async function submit(e){e.preventDefault();if(!form.persona){setError('Elige para quién es el regalo.');window.scrollTo(0,0);return}if(await action({action:'save',item:{...form,id:edit,precio:form.precio===''?'':Number(form.precio)}})){setForm(empty);setEdit('');await load();navigate('Ver regalos');setNotice('Regalo guardado.');}}
- function editing(x){setSheet(null);if(pending.current.has(x.id)||flushing.current){setError('Espera a que se guarden los cambios antes de editar.');flushChanges();return;}setForm({...empty,...x,estado:status(x.estado),precio:x.precio??''});setEdit(x.id);setMoreOpen(true);setOtherOpen(!favoritos.includes(x.persona));navigate('Añadir deseo')}
+ function editing(x){setSheet(null);if(pending.current.has(x.id)||flushing.current){setError('Espera a que se guarden los cambios antes de editar.');flushChanges();return;}setForm({...empty,...x,estado:status(x.estado),precio:x.precio??''});setEdit(x.id);setMoreOpen(true);setOtherOpen(!favoritos.includes(x.persona));setOtherBuyerOpen(false);navigate('Añadir deseo')}
  async function remove(x){setSheet(null);if(pending.current.has(x.id)||flushing.current){setError('Espera a que se guarden los cambios antes de eliminar.');flushChanges();return;}if(window.confirm(`¿Eliminar «${x.regalo}»?`)&&await action({action:'delete',id:x.id})){await load();setNotice('Regalo eliminado.')}}
  function toggleBought(x){const next=status(x.estado)==='Comprado'?(x.comprador?'Asignado':'Deseo sin asignar'):'Comprado';const updated={...x,estado:next};setItems(current=>current.map(item=>item.id===x.id?updated:item));queueChange(updated);}
  async function saveStart(v){if(await action({action:'config',inicio:v})){setStart(v);setNotice('Pantalla de inicio guardada para todos.')}}
@@ -94,7 +96,9 @@ export default function Home() {
  const navItems=[['Menú principal','home','Inicio'],['Ver regalos','gift','Regalos'],null,['Por persona','users','Personas'],['Gastos','euro','Gastos']];
  const tiles=[['Añadir deseo','plus','Una idea nueva'],['Ver regalos','gift',`${items.length-boughtCount} pendientes`],['Por persona','users',`${people.length} personas`],['Gastos','euro',`${money(spentAll)} gastados`]];
  const personGifts = person ? items.filter(x=>x.persona===person) : [];
- const buyerOptions = [...new Set([...buyers, form.comprador.trim()].filter(Boolean))];
+ const buyerExtra = [...new Set([...compradores.filter(b=>!atajosComprador.includes(b)), form.comprador.trim()].filter(b=>b&&!atajosComprador.includes(b)))];
+ const showBuyerSelect = otherBuyerOpen||(form.comprador.trim()&&!atajosComprador.includes(form.comprador.trim()));
+ const buyerFilterValues = [...new Set([...compradores,...buyers])];
 
  return <main className={home?'is-home':adding?'has-bar':'has-nav'}>
   {home?<header className="home-header"><div><span className="eyebrow">Navidad {new Date().getFullYear()}</span><h1>Regalos familiares</h1></div><button className="round-btn" onClick={()=>navigate('Configuración')} aria-label="Configuración"><Icon n="gear"/></button></header>
@@ -113,11 +117,10 @@ export default function Home() {
     {!loading&&!people.length&&<p className="small muted">No se ha podido cargar la lista de personas de la hoja.</p>}</fieldset>
    <label className="field"><span>Regalo <em>*</em></span><input required maxLength="200" value={form.regalo} onChange={e=>setForm({...form,regalo:e.target.value})} placeholder="Ej. Un libro"/></label>
    <Chips label="Celebración (opcional)" values={occasions} value={form.ocasion} onChange={v=>setForm({...form,ocasion:form.ocasion===v?'':v})}/>
-   <fieldset className="chips"><legend>¿Quién lo compra? <small>(se puede cambiar)</small></legend><div className="pills"><button type="button" className={!form.comprador.trim()?'pill selected':'pill'} aria-pressed={!form.comprador.trim()} onClick={()=>typeBuyer('')}>Sin asignar</button>{buyerOptions.map(b=><button type="button" key={b} className={form.comprador===b?'pill selected':'pill'} aria-pressed={form.comprador===b} onClick={()=>pickBuyer(b)}>{b}</button>)}</div></fieldset>
+   <fieldset className="chips"><legend>¿Quién lo compra? <small>(se puede cambiar)</small></legend><div className="pills"><button type="button" className={!form.comprador.trim()&&!otherBuyerOpen?'pill selected':'pill'} aria-pressed={!form.comprador.trim()} onClick={()=>{typeBuyer('');setOtherBuyerOpen(false)}}>Sin asignar</button>{atajosComprador.map(b=><button type="button" key={b} className={form.comprador===b?'pill selected':'pill'} aria-pressed={form.comprador===b} onClick={()=>{pickBuyer(b);setOtherBuyerOpen(false)}}>{b}</button>)}<button type="button" className={showBuyerSelect?'pill selected':'pill'} aria-expanded={!!showBuyerSelect} onClick={()=>setOtherBuyerOpen(!showBuyerSelect)}>Otro…</button></div>{showBuyerSelect&&<select aria-label="Otro comprador" value={form.comprador} onChange={e=>typeBuyer(e.target.value)}><option value="">Selecciona un comprador</option>{buyerExtra.map(b=><option key={b} value={b}>{b}</option>)}</select>}</fieldset>
    <label className="field">Precio previsto (opcional)<span className="money-input"><input type="number" inputMode="decimal" min="0" step="0.01" value={form.precio} onChange={e=>setForm({...form,precio:e.target.value})} placeholder="0,00"/><b>€</b></span></label>
    <button type="button" className="more-btn" aria-expanded={moreOpen} onClick={()=>setMoreOpen(!moreOpen)}><span>Más detalles: enlace, notas…</span><Icon n="down" w={2.4}/></button>
    {moreOpen&&<div className="more">
-    <label className="field">Otro comprador<input value={form.comprador} onChange={e=>typeBuyer(e.target.value)} placeholder="Sin asignar"/></label>
     <label className="field">Otra celebración<input value={form.ocasion} onChange={e=>setForm({...form,ocasion:e.target.value})} placeholder="Opcional"/></label>
     <Chips label="Estado" values={states} value={form.estado} onChange={v=>setForm({...form,estado:v})}/>
     <label className="field">Enlace<input type="url" value={form.enlace} onChange={e=>setForm({...form,enlace:e.target.value})} placeholder="https://..."/></label>
@@ -141,7 +144,7 @@ export default function Home() {
 
   {tab==='Gastos'&&(loading?<p className="empty">Cargando…</p>:<>
    <section className="totals" aria-label="Totales"><div className="stat good"><small>Gastado</small><strong>{money(sum(expenses))}</strong></div><div className="stat warn"><small>Pendiente previsto</small><strong>{money(sum(pendingList))}</strong></div></section>
-   <Chips label="COMPRADOR" scroll values={['Todos',...buyers,...(items.some(x=>!x.comprador)?['Sin comprador']:[])]} value={buyer} onChange={setBuyer} format={v=>v==='Todos'||buyerTotal(v)>0?`${v} · ${round(buyerTotal(v))}`:v}/>
+   <Chips label="COMPRADOR" scroll values={['Todos',...buyerFilterValues,...(items.some(x=>!x.comprador)?['Sin comprador']:[])]} value={buyer} onChange={setBuyer} format={v=>v==='Todos'||buyerTotal(v)>0?`${v} · ${round(buyerTotal(v))}`:v}/>
    <Chips label="DESTINATARIO" scroll values={['Todos',...people]} value={recipient} onChange={setRecipient}/>
    <div className="showing"><span>Mostrando: <b>{buyer} → {recipient}</b></span><small>{expenses.length} {expenses.length===1?'regalo comprado':'regalos comprados'}</small></div>
    {expenses.length>0&&<div className="expenses">{expenses.map(x=><div className="spend" key={x.id}><div><strong>{x.regalo}</strong><small>{x.comprador||'Sin comprador'} → {x.persona}</small></div><b>{hasPrice(x)?money(x.precio):'Sin precio'}</b></div>)}</div>}
