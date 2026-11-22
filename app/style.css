@@ -61,8 +61,8 @@ a{color:#B7A9FF}
 .seg button.selected{background:var(--plum);color:#fff}
 
 .pills{display:flex;flex-wrap:wrap;gap:8px}
-.pills.scroll{flex-wrap:nowrap;overflow-x:auto;margin:0 -16px;padding:0 16px 2px;scrollbar-width:none}
-.pills.scroll::-webkit-scrollbar{display:none}
+.pills.scroll{gap:6px}
+.pills.scroll .pill{min-height:40px;padding:0 14px}
 .pill{flex:none;min-height:44px;padding:0 18px;border-radius:24px;border:1.5px solid var(--line);background:var(--card);font-size:15px;font-weight:800}
 .pill.selected{border:2px solid var(--violet);background:#2E2870;color:#CFC8FF;font-weight:900}
 .chips{border:0;padding:0;margin:0;min-width:0}
