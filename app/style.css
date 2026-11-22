@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap");
 :root{--bg:#23232B;--card:#2F2F39;--line:#3E3E4A;--track:#3A3A46;--ink:#F4F2F8;--muted:#B0ABBF;--plum:#3B2F6B;--coral:#C93B2D;--green:#167A55;--violet:#5B4BD6;--amber:#FFC247;--dark-ink:#2A1F3D}
 *{box-sizing:border-box}
 html{min-height:100%;overflow-y:auto;color-scheme:dark}
